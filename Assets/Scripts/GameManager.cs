@@ -17,7 +17,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] Transform aPlane;
     [Tooltip("CardSO stores enum Name and sprite information")]
     [SerializeField] List<CardSO> cardsData;
-    [Tooltip("Card component that being clicked on, debug purpose only, private")]
+    [Tooltip("Card component that being clicked on, showing because of debug purpose only, private")]
     [SerializeField] private Card selectedCard;
     [Tooltip("Not changing it, just positions for card holders in hand")]
     [SerializeField] List<Transform> cardHolderSlots;
@@ -25,9 +25,18 @@ public class GameManager : MonoBehaviour
     [SerializeField] float cardMoveSpeed;
     private List<Transform> cardsInHand = new List<Transform>();
     int ptrInHand = 0;//so we know where to put the next card
+    bool isGameWon = false;
+    bool isGameLost = false;
+    public static GameManager instance;
     // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
+        if (instance != null)
+        {
+            Destroy(this);
+            return;
+        }
+        instance = this;
         string[] dataPaths = AssetDatabase.FindAssets("t:CardSO"); // Search for all CardSO
 
         foreach (string path in dataPaths)
@@ -44,11 +53,6 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         DetectClick();
-    }
-    public Card SpawnCard(Vector3 pos)
-    {
-        Card cardSpawned= Instantiate(cardPrefab, pos, Quaternion.identity).GetComponent<Card>();
-        return cardSpawned;
     }
     #region Card Function
     private void DetectClick()
@@ -75,17 +79,17 @@ public class GameManager : MonoBehaviour
                     if (hit.collider.TryGetComponent<Card>(out selectedCard))
                     {
                         //selectedCard.SetUP(cardsData[Random.Range(0, 99)]);
-                        if (ptrInHand < 7)
+                        if (ptrInHand < 7 && !selectedCard.IsCovered())
                         {
                             remainingCardsOnBoard--;
                             ptrInHand++;
                             hit.collider.enabled = false;
+                            selectedCard.AskBelowToCheck();
                             StartCoroutine(AddCardToHand(selectedCard.transform, cardHolderSlots[ptrInHand - 1]));
                         }
 
                     }
                 }
-                CheckEndGame();
             }
             //if (touch.phase == TouchPhase.Ended)
             //{
@@ -111,7 +115,9 @@ public class GameManager : MonoBehaviour
             cardTran.position = Vector3.Lerp(cardTran.position, targetTran.position, fractionOfJourney);
             yield return null;
         }
+        //Debug.Log("Time has passed is: "+ (Time.time - startTime));
         cardsInHand.Add(cardTran);
+        MoveCardToLeft();
         StartCoroutine(CheckForTriple());
     }
     private IEnumerator CheckForTriple()
@@ -134,6 +140,7 @@ public class GameManager : MonoBehaviour
                 checkList.Add(cardsInHand[i].GetComponent<Card>().GetName(), 1);
             }
         }
+        CheckEndGame();
     }
 
     private void EliminateThree(CardSO.Name cardName)
@@ -181,7 +188,7 @@ public class GameManager : MonoBehaviour
             {
                 break;
             }
-            float distanceCovered = (Time.time - startTime) * cardMoveSpeed;
+            float distanceCovered = (Time.time - startTime+0.01f) * cardMoveSpeed;
             float fractionOfJourney = distanceCovered / journeyLength;
             cardTran.position = Vector3.Lerp(cardTran.position, targetTran.position, fractionOfJourney);
             yield return null;
@@ -194,7 +201,7 @@ public class GameManager : MonoBehaviour
     private void CheckEndGame()
     {
         StartCoroutine(CheckWonGame());//endGame --> Win
-        if (ptrInHand>=7)
+        if (cardsInHand.Count== 7)
         {
             StartCoroutine(CheckLoseGame());
         }
@@ -202,19 +209,24 @@ public class GameManager : MonoBehaviour
     IEnumerator CheckLoseGame()
     {
         yield return new WaitForSeconds(0.5f);
-        if (ptrInHand >= 7)
+        if (cardsInHand.Count >= 7&& !isGameLost)
         {
             //end Game-->lose
+            isGameLost = true;
             Debug.Log("Game Over");
         }
     }
-    IEnumerator CheckWonGame()
+    IEnumerator CheckWonGame()//now this is in CheckTriple(),could double check, but will be bypassed by a bool
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.5f);
         if (ptrInHand == 0 && remainingCardsOnBoard == 0)
         {
             //endGame --> Win
-            Debug.Log("You Won");
+            if (!isGameWon)
+            {
+                isGameWon = true;
+                Debug.Log("You Won");
+            }
         }
     }
     #endregion
@@ -250,6 +262,16 @@ public class GameManager : MonoBehaviour
     public void Exit()
     {
         Application.Quit();
+    }
+    #endregion
+    #region getter and setter
+    public List<CardSO> GetCardsData()
+    {
+        return cardsData;
+    }
+    public void SetRemainingCardsOnBoard(int remainingNum)
+    {
+        remainingCardsOnBoard = remainingNum;
     }
     #endregion
 }
