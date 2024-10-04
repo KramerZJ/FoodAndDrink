@@ -22,6 +22,7 @@ public class Card : MonoBehaviour
 
     public void AskBelowToCheck()
     {
+        //Debug.Log(GetName()+" is asking below to check");
         foreach (Transform corner in fourCorners)
         {
             RaycastHit2D hit = Physics2D.Raycast(corner.position, corner.forward, Mathf.Infinity);//0.3 a layer

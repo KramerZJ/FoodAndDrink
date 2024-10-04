@@ -8,7 +8,13 @@ public class CardSpawner : MonoBehaviour
     [SerializeField] GameObject cardPrefab;
     [SerializeField] Vector3Int boardSize = new Vector3Int(3,1,1);
     [SerializeField] int cardComplexity=24;
+    [SerializeField] float cardWidth = 3.2f, cardHeight = 3.5f, cardDepth = 0.01f;
     private Vector2 spawnOffset;
+    [SerializeField] [Range(-2, 2)] private float cardLayerOffsetY = 0.1f;
+    public enum Difficuty {tooeasy,easy, normal, hard};
+    public enum LayoutPattern {Square, SeparetedSquare, Circle};
+    [SerializeField] Difficuty difSet =Difficuty.easy;
+    [SerializeField] LayoutPattern patternSet = LayoutPattern.Square;
     // Start is called before the first frame update
     void Start()
     {
@@ -20,8 +26,33 @@ public class CardSpawner : MonoBehaviour
         gameManager = GameManager.instance;
         spawnOffset = new Vector2(-(boardSize.x-1) * 1.5f, -boardSize.y * 1.5f + 6.5f);//to center the board
         gameManager.SetRemainingCardsOnBoard(boardSize.x* boardSize.y* boardSize.z);//boardSize should not be 0;
-        NoramlCardCombination(boardSize.x, boardSize.y, boardSize.z);
+        HandleDifficuty();
     }
+
+    public void SetDifficult(Difficuty difficuty)
+    {
+        difSet = difficuty;
+    }
+
+    private void HandleDifficuty()
+    {
+        switch (difSet) { 
+            case Difficuty.easy:
+                EasyCardCombination(boardSize.x, boardSize.y, boardSize.z);
+                break; 
+            case Difficuty.tooeasy:
+                TooEasyCardCombination(boardSize.x, boardSize.y, boardSize.z);
+                break;
+            case Difficuty.normal:
+                NoramlCardCombination(boardSize.x, boardSize.y, boardSize.z);
+                break;
+            case Difficuty.hard:
+                HardCardCombination(boardSize.x, boardSize.y, boardSize.z);
+                break;
+        }
+    }
+
+
     //TODO: use some pattern for the cards board, to let player see below
     //TODO: give player somthing hard to play. kind of check
     //center of screen is (0, 5), each takes 3 in x
@@ -41,8 +72,8 @@ public class CardSpawner : MonoBehaviour
             {
                 for (int h = 0; h< height; h++)
                 {
-                    Vector3 spawnPosition = new Vector3(j * 3.0f + spawnOffset.x, h * 3.2f + spawnOffset.y, i * 0.01f);
-                    spawnPosition = PatternByLayer(i, spawnPosition);
+                    //TODO:
+                    Vector3 spawnPosition = PatternByLayer(i,j,h);
                     Card cardToSpawn = Instantiate(cardPrefab, spawnPosition, Quaternion.identity, transform).GetComponent<Card>();
                     if (counterForThree > 2)
                     {
@@ -50,6 +81,10 @@ public class CardSpawner : MonoBehaviour
                         counterForThree = 0;
                     }
                     cardToSpawn.SetUP(gameManager.GetCardsData()[randSONum]);
+                    if (i == 0)
+                    {
+                        cardToSpawn.PealOffCover();
+                    }
                     counterForThree++;
                 }
             }
@@ -61,12 +96,29 @@ public class CardSpawner : MonoBehaviour
     /// <param name="depth"></param>
     /// <param name="spawnPosition"></param>
     /// <returns></returns>
-    private static Vector3 PatternByLayer(int depth, Vector3 spawnPosition)
+    private Vector3 PatternByLayer(int depth, int width, int height)
+    {
+        Vector3 spawnPosition = new Vector3(width * cardWidth + spawnOffset.x, height * cardHeight + spawnOffset.y, depth * cardDepth);
+        switch (patternSet)
+        {
+            case LayoutPattern.Square: 
+                return spawnPosition;
+            case LayoutPattern.SeparetedSquare:
+                return PatternOne(depth, spawnPosition);
+            case LayoutPattern.Circle:
+                return PatternTwo(depth, width, height);
+            default:
+                Debug.LogError("No layout pattern, return sqaure layout.");
+                return spawnPosition;
+                break;
+        }
+    }
+    private Vector3 PatternOne(int depth, Vector3 spawnPosition)
     {
         if (depth % 2 == 0)
         {
-            float xOffset = 0.2f;
-            float yOffset = 0.2f;
+            float xOffset = cardWidth/2;
+            float yOffset = cardHeight / 2;
             if (spawnPosition.x <= 0)
             {
                 xOffset = -xOffset;
@@ -86,8 +138,25 @@ public class CardSpawner : MonoBehaviour
             spawnPosition.x += xOffset;
             spawnPosition.y += yOffset;
         }
-
         return spawnPosition;
+    }
+    /// <summary>
+    /// return a position depending on i,h,j
+    /// </summary>
+    /// <param name="depth"></param>
+    /// <param name="width"></param>
+    /// <param name="height"></param>
+    /// <returns> a position </returns>
+    private Vector3 PatternTwo(int depth, int width, int height)//center offset (0,10) parameter:(i,j,h)
+    { 
+        width-= boardSize.x/2;
+        float offset = cardWidth;
+        float y = Mathf.Sqrt(Mathf.Abs(boardSize.x^2 - width^2));
+        if (width%2==0)
+        {
+            y = -y;
+        }
+        return new Vector3(width, y+10f, depth);//TODO
     }
     /// <summary>
     /// Each layer is shuffled
@@ -121,9 +190,10 @@ public class CardSpawner : MonoBehaviour
             {
                 for (int h = 0; h < height; h++)
                 {
-                    Vector3 spawnPosition = new Vector3(j * 3.0f + spawnOffset.x, h * 3.2f + spawnOffset.y, i * 0.01f);
+                    Vector3 spawnPosition = new Vector3(j * cardWidth + spawnOffset.x, h * cardHeight + spawnOffset.y, i * 0.01f);
                     Card cardToSpawn = Instantiate(cardPrefab, spawnPosition, Quaternion.identity, transform).GetComponent<Card>();
                     cardToSpawn.SetUP(gameManager.GetCardsData()[aLayer[j,h]]);
+                    cardToSpawn.PealOffCover();
                 }
             }
         }
@@ -163,10 +233,13 @@ public class CardSpawner : MonoBehaviour
             {
                 for (int h = 0; h < height; h++)
                 {
-                    Vector3 spawnPosition = new Vector3(j * 3.0f + spawnOffset.x, h * 3.2f + spawnOffset.y, i * 0.01f);
-                    spawnPosition = PatternByLayer(i, spawnPosition);
+                    Vector3 spawnPosition = PatternByLayer(i,j,h);
                     Card cardToSpawn = Instantiate(cardPrefab, spawnPosition, Quaternion.identity, transform).GetComponent<Card>();
                     cardToSpawn.SetUP(gameManager.GetCardsData()[wholeSet[j, h, i]]);
+                    if (i == 0)
+                    {
+                        cardToSpawn.PealOffCover();
+                    }
                 }
             }
         }
@@ -210,9 +283,13 @@ public class CardSpawner : MonoBehaviour
             {
                 for (int h = 0; h < height; h++)
                 {
-                    Vector3 spawnPosition = new Vector3(j * 3.0f + spawnOffset.x, h * 3.2f + spawnOffset.y, i * 0.01f);
+                    Vector3 spawnPosition = new Vector3(j * cardWidth + spawnOffset.x, h * cardHeight + spawnOffset.y + i * cardLayerOffsetY, i * 0.01f);//0.01f is the depth different
                     Card cardToSpawn = Instantiate(cardPrefab, spawnPosition, Quaternion.identity, transform).GetComponent<Card>();
                     cardToSpawn.SetUP(gameManager.GetCardsData()[wholeSet[j, h, i]]);
+                    if (i == 0)
+                    {
+                        cardToSpawn.PealOffCover();
+                    }
                 }
             }
         }

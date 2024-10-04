@@ -539,6 +539,10 @@ PrefabInstance:
       propertyPath: m_LocalRotation.z
       value: -0
       objectReference: {fileID: 0}
+    - target: {fileID: 7401298808457135668, guid: 0a6177fc6bd8ee945988f84459f5b65c, type: 3}
+      propertyPath: orthographic size
+      value: 29.758455
+      objectReference: {fileID: 0}
     - target: {fileID: 8671387284386780892, guid: 0a6177fc6bd8ee945988f84459f5b65c, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.4768548
@@ -1186,6 +1190,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cardPrefab: {fileID: 2083269262742167345, guid: b0deedf67b4e28d48bb9e18bfcf4517f, type: 3}
   boardSize: {x: 6, y: 6, z: 2}
+  cardComplexity: 24
+  cardWidth: 3.1
+  cardHeight: 3.5
+  cardDepth: 0.01
+  cardLayerOffsetY: -0.21
+  difSet: 2
+  patternSet: 2
 --- !u!1001 &1687705017
 PrefabInstance:
   m_ObjectHideFlags: 0
