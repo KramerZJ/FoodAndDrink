@@ -96,7 +96,7 @@ public class CardSpawner : MonoBehaviour
     /// <param name="depth"></param>
     /// <param name="spawnPosition"></param>
     /// <returns></returns>
-    private Vector3 PatternByLayer(int depth, int width, int height)
+    private Vector3 PatternByLayer(int depth, int width, int height, int[,,] wholeSet)
     {
         Vector3 spawnPosition = new Vector3(width * cardWidth + spawnOffset.x, height * cardHeight + spawnOffset.y, depth * cardDepth);
         switch (patternSet)
@@ -104,7 +104,7 @@ public class CardSpawner : MonoBehaviour
             case LayoutPattern.Square: 
                 return spawnPosition;
             case LayoutPattern.SeparetedSquare:
-                return PatternOne(depth, spawnPosition);
+                return PatternOne(depth, width, height, wholeSet);
             case LayoutPattern.Circle:
                 return PatternTwo(depth, width, height);
             default:
@@ -112,12 +112,14 @@ public class CardSpawner : MonoBehaviour
                 return spawnPosition;
                 break;
         }
+
     }
-    private Vector3 PatternOne(int depth, Vector3 spawnPosition)
+    private Vector3 PatternOne(int depth, int width, int height, int[,,] wholeSet)
     {
+        Vector3 spawnPosition = new Vector3(width * cardWidth + spawnOffset.x, height * cardHeight + spawnOffset.y, depth * cardDepth);
         if (depth % 2 == 0)
         {
-            float xOffset = cardWidth/2;
+            float xOffset = cardWidth / 2;
             float yOffset = cardHeight / 2;
             if (spawnPosition.x <= 0)
             {
@@ -139,24 +141,42 @@ public class CardSpawner : MonoBehaviour
             spawnPosition.y += yOffset;
         }
         return spawnPosition;
+        for (int i = 0; i < depth; i++)
+        {
+            for (int j = 0; j < width; j++)
+            {
+                for (int h = 0; h < height; h++)
+                {
+                    
+                    Card cardToSpawn = Instantiate(cardPrefab, spawnPosition, Quaternion.identity, transform).GetComponent<Card>();
+                    cardToSpawn.SetUP(gameManager.GetCardsData()[wholeSet[j, h, i]]);
+                    if (i == 0)
+                    {
+                        cardToSpawn.PealOffCover();
+                    }
+                }
+            }
+        }
+        
     }
     /// <summary>
     /// return a position depending on i,h,j
     /// </summary>
-    /// <param name="depth"></param>
-    /// <param name="width"></param>
-    /// <param name="height"></param>
+    /// <param name="_depth"></param>
+    /// <param name="_x"></param>
+    /// <param name="_y"></param>
     /// <returns> a position </returns>
-    private Vector3 PatternTwo(int depth, int width, int height)//center offset (0,10) parameter:(i,j,h)
+    private Vector3 PatternTwo(int _depth, int _x, int _y)//center offset (0,10) parameter:(i,j,h)
     { 
-        width-= boardSize.x/2;
-        float offset = cardWidth;
-        float y = Mathf.Sqrt(Mathf.Abs(boardSize.x^2 - width^2));
-        if (width%2==0)
+        _x-= boardSize.x/2;
+        float offsetX = cardWidth;
+        float offsetY = cardHeight;
+        float y = Mathf.Sqrt(Mathf.Abs(9 - _x^2));
+        if (_x%2==0)
         {
             y = -y;
         }
-        return new Vector3(width, y+10f, depth);//TODO
+        return new Vector3(offsetX*_x, 10f+y* offsetY, _depth);//TODO
     }
     /// <summary>
     /// Each layer is shuffled
@@ -227,22 +247,8 @@ public class CardSpawner : MonoBehaviour
             }
         }
         wholeSet = Shuffle(wholeSet);
-        for (int i =0; i< depth; i++)
-        {
-            for (int j = 0; j < width; j++)
-            {
-                for (int h = 0; h < height; h++)
-                {
-                    Vector3 spawnPosition = PatternByLayer(i,j,h);
-                    Card cardToSpawn = Instantiate(cardPrefab, spawnPosition, Quaternion.identity, transform).GetComponent<Card>();
-                    cardToSpawn.SetUP(gameManager.GetCardsData()[wholeSet[j, h, i]]);
-                    if (i == 0)
-                    {
-                        cardToSpawn.PealOffCover();
-                    }
-                }
-            }
-        }
+        PatternByLayer(width,  height,  depth, wholeSet);
+        
     }
     /// <summary>
     /// All the order of cards are shuffled, and the category of the cards are maximumed
